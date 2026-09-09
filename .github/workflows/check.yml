@@ -21,10 +21,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # Same npm the lock file was written with. An older one reads esbuild's
+      # optional platform packages as required and refuses to install.
+      - run: npm install -g npm@12.0.2
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - uses: swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
       # The web view and its build dependencies. Without these the crate does not
