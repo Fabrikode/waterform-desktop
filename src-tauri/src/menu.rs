@@ -7,18 +7,30 @@
 //! nothing there.
 
 use tauri::menu::{
-    AboutMetadata, Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
+    CheckMenuItemBuilder, Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
 };
 use tauri::{AppHandle, Runtime};
 
 use crate::i18n::{self, Lang};
 
 pub const ID_SERVER: &str = "wf.server";
+pub const ID_ABOUT: &str = "wf.about";
+pub const ID_LANG_SYSTEM: &str = "wf.lang.system";
+pub const ID_LANG_TR: &str = "wf.lang.tr";
+pub const ID_LANG_EN: &str = "wf.lang.en";
 pub const ID_UPDATES: &str = "wf.updates";
 pub const ID_RELOAD: &str = "wf.reload";
 pub const ID_DOWNLOADS: &str = "wf.downloads";
 
-pub fn build<R: Runtime>(app: &AppHandle<R>, lang: Lang) -> tauri::Result<Menu<R>> {
+/// `chosen` is what the customer picked, and `None` means they have not: the
+/// menu shows which of the three is in force rather than only the language being
+/// drawn, so "System language" stays distinguishable from "Turkish" on a Turkish
+/// machine.
+pub fn build<R: Runtime>(
+    app: &AppHandle<R>,
+    lang: Lang,
+    chosen: Option<Lang>,
+) -> tauri::Result<Menu<R>> {
     let s = i18n::strings(lang);
 
     let server = MenuItemBuilder::with_id(ID_SERVER, s.server)
@@ -30,14 +42,28 @@ pub fn build<R: Runtime>(app: &AppHandle<R>, lang: Lang) -> tauri::Result<Menu<R
         .build(app)?;
     let downloads = MenuItemBuilder::with_id(ID_DOWNLOADS, s.downloads_folder).build(app)?;
 
-    let about_metadata = AboutMetadata {
-        name: Some("WaterForm".into()),
-        version: Some(app.package_info().version.to_string()),
-        copyright: Some("© Fabrikode".into()),
-        website: Some("https://waterform.fabrikode.com".into()),
-        website_label: Some("waterform.fabrikode.com".into()),
-        ..Default::default()
-    };
+    // Our own window rather than the platform's About panel: the panel cannot
+    // carry a link anyone can click, and the two things a customer needs from it
+    // are the address of the server they are on and a way to reach us.
+    let about = MenuItemBuilder::with_id(ID_ABOUT, s.about).build(app)?;
+
+    let language = SubmenuBuilder::new(app, s.menu_language)
+        .item(
+            &CheckMenuItemBuilder::with_id(ID_LANG_SYSTEM, s.lang_system)
+                .checked(chosen.is_none())
+                .build(app)?,
+        )
+        .item(
+            &CheckMenuItemBuilder::with_id(ID_LANG_TR, "Türkçe")
+                .checked(chosen == Some(Lang::Tr))
+                .build(app)?,
+        )
+        .item(
+            &CheckMenuItemBuilder::with_id(ID_LANG_EN, "English")
+                .checked(chosen == Some(Lang::En))
+                .build(app)?,
+        )
+        .build()?;
 
     let edit = SubmenuBuilder::new(app, s.menu_edit)
         .item(&PredefinedMenuItem::undo(app, Some(s.undo))?)
@@ -55,13 +81,10 @@ pub fn build<R: Runtime>(app: &AppHandle<R>, lang: Lang) -> tauri::Result<Menu<R
         // expects About, Services, Hide and Quit to be in it. Anything else here
         // reads as a foreign application.
         let app_menu = SubmenuBuilder::new(app, s.menu_app)
-            .item(&PredefinedMenuItem::about(
-                app,
-                Some(s.about),
-                Some(about_metadata),
-            )?)
+            .item(&about)
             .separator()
             .item(&server)
+            .item(&language)
             .item(&updates)
             .separator()
             .item(&PredefinedMenuItem::services(app, None)?)
@@ -97,6 +120,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>, lang: Lang) -> tauri::Result<Menu<R
     {
         let file = SubmenuBuilder::new(app, s.menu_file)
             .item(&server)
+            .item(&language)
             .item(&downloads)
             .separator()
             .item(&PredefinedMenuItem::quit(app, Some(s.quit))?)
@@ -110,11 +134,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>, lang: Lang) -> tauri::Result<Menu<R
         let help = SubmenuBuilder::new(app, s.menu_help)
             .item(&updates)
             .separator()
-            .item(&PredefinedMenuItem::about(
-                app,
-                Some(s.about),
-                Some(about_metadata),
-            )?)
+            .item(&about)
             .build()?;
 
         MenuBuilder::new(app)

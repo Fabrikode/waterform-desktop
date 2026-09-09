@@ -19,6 +19,26 @@ impl Lang {
             Lang::En => "en",
         }
     }
+
+    pub fn from_code(code: &str) -> Option<Self> {
+        match code {
+            "tr" => Some(Lang::Tr),
+            "en" => Some(Lang::En),
+            _ => None,
+        }
+    }
+}
+
+/// The language to draw in: what the customer chose, or failing that what the
+/// machine is set to.
+///
+/// The choice exists because the machine is a poor guess for this product. A
+/// Turkish engineer is often given an English Windows install by whoever set the
+/// office up, and a company that sells tanks in Europe may have Turkish staff on
+/// English machines. Following the system alone would leave both of them with a
+/// menu in the wrong language and nothing to do about it.
+pub fn resolve(stored: Option<&str>) -> Lang {
+    stored.and_then(Lang::from_code).unwrap_or_else(detect)
 }
 
 /// Turkish for a Turkish machine, English for every other. The product is sold
@@ -41,6 +61,8 @@ fn from_locale(locale: Option<&str>) -> Lang {
 /// -specific, which is why the compiler is told not to count the unused ones.
 #[allow(dead_code)]
 pub struct Strings {
+    pub menu_language: &'static str,
+    pub lang_system: &'static str,
     pub menu_app: &'static str,
     pub menu_file: &'static str,
     pub menu_edit: &'static str,
@@ -69,6 +91,8 @@ pub struct Strings {
 }
 
 const TR: Strings = Strings {
+    menu_language: "Dil",
+    lang_system: "Sistemin dili",
     menu_app: "WaterForm",
     menu_file: "Dosya",
     menu_edit: "Düzen",
@@ -97,6 +121,8 @@ const TR: Strings = Strings {
 };
 
 const EN: Strings = Strings {
+    menu_language: "Language",
+    lang_system: "System language",
     menu_app: "WaterForm",
     menu_file: "File",
     menu_edit: "Edit",
@@ -140,6 +166,15 @@ mod tests {
         assert_eq!(from_locale(Some("tr-TR")), Lang::Tr);
         assert_eq!(from_locale(Some("tr")), Lang::Tr);
         assert_eq!(from_locale(Some("TR-tr")), Lang::Tr);
+    }
+
+    #[test]
+    fn a_choice_beats_the_machine() {
+        assert_eq!(resolve(Some("tr")), Lang::Tr);
+        assert_eq!(resolve(Some("en")), Lang::En);
+        // Nonsense in the settings file is not a language; the machine decides.
+        assert_eq!(resolve(Some("de")), detect());
+        assert_eq!(resolve(None), detect());
     }
 
     #[test]

@@ -104,7 +104,7 @@ fn build_updater(app: &AppHandle) -> tauri_plugin_updater::Result<tauri_plugin_u
 /// network we knew they did not have. A check the customer asked for always
 /// answers, because silence would read as a broken button.
 pub async fn check(app: AppHandle, manual: bool) {
-    let lang = app.state::<Shell>().lang;
+    let lang = app.state::<Shell>().lang();
     let strings = i18n::strings(lang);
 
     if !manual {

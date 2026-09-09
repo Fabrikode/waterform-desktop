@@ -27,6 +27,7 @@ use i18n::Lang;
 use settings::Settings;
 
 const MAIN: &str = "main";
+const ABOUT: &str = "about";
 /// Ten seconds after launch. Late enough that the application has the network to
 /// itself while it loads, early enough that someone who opens the shell for five
 /// minutes still hears about a new version.
@@ -41,7 +42,12 @@ const PLATFORM: &str = "windows";
 const PLATFORM: &str = "linux";
 
 pub struct Shell {
-    pub lang: Lang,
+    /// The language everything the shell draws is in. Behind a lock because the
+    /// customer can change it from the menu while the application is running.
+    pub lang: Mutex<Lang>,
+    /// What they chose, as opposed to what is being drawn: `None` means they are
+    /// following the machine, which the menu has to be able to show.
+    pub chosen_lang: Mutex<Option<Lang>>,
     pub config_dir: PathBuf,
     pub settings: Mutex<Settings>,
     /// Where the shell's own pages live. Read from the window once it exists
@@ -67,6 +73,10 @@ impl Shell {
     fn server_url(&self) -> Option<String> {
         self.settings.lock().unwrap().server_url.clone()
     }
+
+    fn lang(&self) -> Lang {
+        *self.lang.lock().unwrap()
+    }
 }
 
 /* ── what the shell pages are told ─────────────────────────────────────────── */
@@ -79,6 +89,9 @@ struct ShellState {
     version: String,
     default_server: String,
     server_url: Option<String>,
+    /// What that server last said its own version was, so the About window can
+    /// answer "which server am I on and what is running there" without a request.
+    server_version: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -105,12 +118,17 @@ enum Bootstrap {
 
 #[tauri::command]
 fn shell_state(app: AppHandle, shell: State<'_, Shell>) -> ShellState {
+    let (server_url, server_version) = {
+        let settings = shell.settings.lock().unwrap();
+        (settings.server_url.clone(), settings.last_version.clone())
+    };
     ShellState {
-        lang: shell.lang.code(),
+        lang: shell.lang().code(),
         platform: PLATFORM,
         version: app.package_info().version.to_string(),
         default_server: server::DEFAULT_SERVER.to_string(),
-        server_url: shell.server_url(),
+        server_url,
+        server_version,
     }
 }
 
@@ -188,6 +206,32 @@ fn restart_now(app: AppHandle) {
     app.restart();
 }
 
+/// The language the shell draws in: "tr", "en", or nothing to follow the machine.
+#[tauri::command]
+fn set_language(app: AppHandle, code: Option<String>) {
+    apply_language(&app, code);
+}
+
+/// Opens one of the few addresses the About window carries, in the customer's
+/// own browser. Only https and mailto: a shell page is ours, but a command that
+/// opens whatever it is handed is a command worth not writing.
+#[tauri::command]
+fn open_link(url: String) -> Result<(), String> {
+    let parsed = Url::parse(&url).map_err(|_| "not-an-address".to_string())?;
+    match parsed.scheme() {
+        "https" | "mailto" => {}
+        _ => return Err("unsupported-scheme".to_string()),
+    }
+    tauri_plugin_opener::open_url(parsed.as_str(), None::<&str>).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn close_about(app: AppHandle) {
+    if let Some(window) = app.get_webview_window(ABOUT) {
+        let _ = window.close();
+    }
+}
+
 /// Closes the update window without postponing anything: the states that use it
 /// are the ones where there is nothing to postpone.
 #[tauri::command]
@@ -234,8 +278,8 @@ fn probe_code(error: server::ProbeError) -> &'static str {
     }
 }
 
-/// Ours to show in the window, or somebody else's to open in a browser.
-fn is_ours(app: &AppHandle, url: &Url) -> bool {
+/// A page that came out of this binary rather than off a server.
+fn is_local(app: &AppHandle, url: &Url) -> bool {
     match url.scheme() {
         "http" | "https" => {}
         // tauri:, app:, blob:, data:, about: — the shell's own pages, and the
@@ -248,22 +292,28 @@ fn is_ours(app: &AppHandle, url: &Url) -> bool {
         return true;
     }
 
-    let shell = app.state::<Shell>();
-    let local_host = shell
+    app.state::<Shell>()
         .local_base
         .lock()
         .unwrap()
         .as_ref()
-        .and_then(|u| u.host_str().map(str::to_ascii_lowercase));
-    if local_host.as_deref() == Some(host.as_str()) {
+        .and_then(|u| u.host_str().map(str::to_ascii_lowercase))
+        .as_deref()
+        == Some(host.as_str())
+}
+
+/// Ours to show in the window, or somebody else's to open in a browser.
+fn is_ours(app: &AppHandle, url: &Url) -> bool {
+    if is_local(app, url) {
         return true;
     }
-
-    let server_host = shell
+    let host = url.host_str().unwrap_or_default().to_ascii_lowercase();
+    app.state::<Shell>()
         .server_url()
         .and_then(|s| Url::parse(&s).ok())
-        .and_then(|u| u.host_str().map(str::to_ascii_lowercase));
-    server_host.as_deref() == Some(host.as_str())
+        .and_then(|u| u.host_str().map(str::to_ascii_lowercase))
+        .as_deref()
+        == Some(host.as_str())
 }
 
 fn open_outside(url: &Url) {
@@ -343,7 +393,7 @@ fn unique_in(dir: &Path, name: &str) -> PathBuf {
 /// A file that arrives with no sign of having arrived reads as an export that
 /// failed, which is how support calls start.
 fn announce_download(app: &AppHandle, path: &Path) {
-    let strings = i18n::strings(app.state::<Shell>().lang);
+    let strings = i18n::strings(app.state::<Shell>().lang());
     let name = path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
@@ -356,6 +406,78 @@ fn announce_download(app: &AppHandle, path: &Path) {
         .show();
     if let Err(error) = result {
         log::info!("saved {name}, could not show a notification: {error}");
+    }
+}
+
+/// Puts a language choice into effect everywhere it shows.
+///
+/// The menu has to be rebuilt because its labels are baked in when it is made,
+/// and any shell page that is open is reloaded so the window in front of the
+/// customer changes with the setting rather than at the next launch. The
+/// application's own page is left alone: it is the server's, and it follows the
+/// account's language, not this one.
+fn apply_language(app: &AppHandle, code: Option<String>) {
+    let shell = app.state::<Shell>();
+    {
+        let mut settings = shell.settings.lock().unwrap();
+        settings.lang = code.clone();
+        if let Err(error) = settings.save(&shell.config_dir) {
+            log::warn!("could not remember the language: {error}");
+        }
+    }
+
+    let chosen = code.as_deref().and_then(Lang::from_code);
+    let lang = i18n::resolve(code.as_deref());
+    *shell.lang.lock().unwrap() = lang;
+    *shell.chosen_lang.lock().unwrap() = chosen;
+
+    match menu::build(app, lang, chosen) {
+        Ok(menu) => {
+            if let Err(error) = app.set_menu(menu) {
+                log::warn!("could not redraw the menu: {error}");
+            }
+        }
+        Err(error) => log::warn!("could not build the menu: {error}"),
+    }
+
+    for label in [ABOUT, update::WINDOW, MAIN] {
+        let Some(window) = app.get_webview_window(label) else {
+            continue;
+        };
+        let Ok(current) = window.url() else { continue };
+        if label == MAIN && !is_local(app, &current) {
+            continue;
+        }
+        let _ = window.navigate(current);
+    }
+}
+
+fn open_about(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window(ABOUT) {
+        let _ = window.show();
+        let _ = window.set_focus();
+        return;
+    }
+    // The addresses on this window are opened in the customer's browser, not
+    // here: a shell window that can wander onto a website stops being chrome.
+    let nav = app.clone();
+    let built = WebviewWindowBuilder::new(app, ABOUT, WebviewUrl::App("about.html".into()))
+        .on_navigation(move |url| {
+            if is_local(&nav, url) {
+                true
+            } else {
+                open_outside(url);
+                false
+            }
+        })
+        .title("WaterForm")
+        .inner_size(400.0, 580.0)
+        .resizable(false)
+        .maximizable(false)
+        .center()
+        .build();
+    if let Err(error) = built {
+        log::error!("could not open the about window: {error}");
     }
 }
 
@@ -478,6 +600,10 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .on_menu_event(|app, event| match event.id().as_ref() {
             menu::ID_SERVER => open_connect_page(app),
+            menu::ID_ABOUT => open_about(app),
+            menu::ID_LANG_SYSTEM => apply_language(app, None),
+            menu::ID_LANG_TR => apply_language(app, Some("tr".into())),
+            menu::ID_LANG_EN => apply_language(app, Some("en".into())),
             menu::ID_RELOAD => reload_main(app),
             menu::ID_DOWNLOADS => open_downloads_folder(app),
             menu::ID_UPDATES => {
@@ -497,15 +623,24 @@ pub fn run() {
             restart_now,
             update_status,
             close_update,
+            set_language,
+            open_link,
+            close_about,
         ])
         .setup(|app| {
-            let lang = i18n::detect();
             let config_dir = app.path().app_config_dir()?;
             let stored = Settings::load(&config_dir);
-            log::info!("starting, server = {:?}", stored.server_url);
+            let chosen = stored.lang.as_deref().and_then(Lang::from_code);
+            let lang = i18n::resolve(stored.lang.as_deref());
+            log::info!(
+                "starting, server = {:?}, language = {}",
+                stored.server_url,
+                lang.code()
+            );
 
             app.manage(Shell {
-                lang,
+                lang: Mutex::new(lang),
+                chosen_lang: Mutex::new(chosen),
                 config_dir,
                 settings: Mutex::new(stored),
                 local_base: Mutex::new(None),
@@ -514,7 +649,7 @@ pub fn run() {
             });
 
             let handle = app.handle().clone();
-            app.set_menu(menu::build(&handle, lang)?)?;
+            app.set_menu(menu::build(&handle, lang, chosen)?)?;
             build_main(&handle)?;
             watch_for_updates(handle);
             Ok(())

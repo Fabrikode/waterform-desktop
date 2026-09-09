@@ -149,3 +149,37 @@ button[disabled] { opacity: 0.55; cursor: default; }
 .bar > i { display: block; height: 100%; width: 0; background: var(--blue); transition: width 0.2s ease; }
 
 [hidden] { display: none !important; }
+
+/* ── The About window ──────────────────────────────────────────────────────
+   Two facts and three addresses. The facts are the ones a customer is asked
+   for when they write to us, so they are here rather than somewhere they would
+   have to be talked through on the telephone. */
+
+.rows { margin-top: 18px; border-top: 1px solid var(--border); }
+.rows > div {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rows dt { color: var(--muted); }
+.rows dd {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
+  color: var(--ink);
+  word-break: break-all;
+  user-select: text;
+}
+
+.links { margin-top: 18px; list-style: none; }
+.links li + li { margin-top: 7px; }
+.links a {
+  color: var(--blue);
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.links a:hover { text-decoration: underline; }
+.links a:focus-visible { outline: none; box-shadow: var(--ring); }

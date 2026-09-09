@@ -20,6 +20,10 @@ pub struct Settings {
     /// Unix seconds. An update offer the customer put off is not offered again
     /// until this passes. Never blocks, only delays.
     pub update_snoozed_until: Option<i64>,
+    /// "tr" or "en" when the customer has chosen; `None` means follow the
+    /// machine. Stored as the code rather than the enum so that a settings file
+    /// written by a build that knows a third language still opens here.
+    pub lang: Option<String>,
 }
 
 impl Settings {
@@ -81,6 +85,7 @@ mod tests {
             server_url: Some("https://depo.sirket.com".into()),
             last_version: Some("0c74ba8".into()),
             update_snoozed_until: Some(1_800_000_000),
+            lang: Some("tr".into()),
         };
         settings.save(&dir).unwrap();
         assert_eq!(Settings::load(&dir), settings);

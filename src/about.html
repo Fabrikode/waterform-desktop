@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WaterForm</title>
+<link rel="stylesheet" href="shell.css">
+<style>
+  /* A fixed window that is only ever this one card: the card's own border and
+     the page's padding would draw a box inside a box. */
+  body { padding: 0; align-items: stretch; }
+  .card { max-width: none; min-height: 100vh; border: 0; border-radius: 0; display: flex; flex-direction: column; }
+  .card > .row { margin-top: auto; padding-top: 20px; }
+  #close { width: 100%; }
+</style>
+</head>
+<body>
+<main class="card">
+  <img class="mark" src="brand/mark.svg" alt="" width="40" height="40">
+  <h1>WaterForm</h1>
+  <p class="addr" id="version"></p>
+  <p id="made"></p>
+
+  <dl class="rows">
+    <div><dt data-s="aboutServer"></dt><dd id="server"></dd></div>
+    <div><dt data-s="aboutServerVersion"></dt><dd id="server-version"></dd></div>
+  </dl>
+
+  <ul class="links">
+    <li><a href="https://waterform.fabrikode.com" data-s="aboutProduct"></a></li>
+    <li><a href="https://fabrikode.com" data-s="aboutCompany"></a></li>
+    <li><a id="mail"></a></li>
+  </ul>
+
+  <p class="note" data-s="aboutRights"></p>
+  <div class="row"><button type="button" class="quiet" id="close" data-s="close"></button></div>
+</main>
+<script type="module" src="js/about.js"></script>
+</body>
+</html>

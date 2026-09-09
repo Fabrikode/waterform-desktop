@@ -27,6 +27,12 @@ change to the Rust half is all three; a change to a shell page is one.
 - [ ] A link to somewhere that is not the server opens in the browser, not in
       the window.
 - [ ] Menu > Check for updates on the newest version says so and closes.
+- [ ] Menu > Language: switching to Turkish redraws the menu at once, and an
+      About window that is already open changes with it. The choice survives a
+      restart; "System language" puts it back.
+- [ ] About: the version, the server address and the server's version are all
+      right, and the three links open in the browser rather than in the window.
+      The contact address matches the language.
 
 ## macOS only
 

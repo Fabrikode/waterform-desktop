@@ -18,7 +18,7 @@ behaviour is decided, it belongs on the server instead.
 | **This repository is public** | On a private repository a macOS runner minute counts ten times and a Windows one twice; one release would take a tenth of the organisation's 2,000 monthly minutes and share that budget with the application's own CI. Public runners and public releases are free. Nothing here is worth hiding. There is no open source licence: the code is readable, not reusable. |
 | **No Apple Developer account** | Ad-hoc signing, no notarisation. A customer gets one Gatekeeper prompt on first install, which the download page walks them through, and never again, including after updates. Adding the paid account later changes CI secrets and nothing else. |
 | **No offline mode** | Without a server there is no application. A local copy of a customer's tanks would be a second version of the truth about something they build out of steel. |
-| **Settings in a JSON file** | Three fields. A support engineer can read it down the phone; a corrupt one costs a re-typed address, not a reinstall. |
+| **Settings in a JSON file** | Four fields. A support engineer can read it down the phone; a corrupt one costs a re-typed address, not a reinstall. |
 
 ## The rules
 
@@ -41,7 +41,13 @@ behaviour is decided, it belongs on the server instead.
   reads the codes out of the Rust source and fails if either language is missing
   one.
 - **Turkish and English, both, everywhere a person reads.** The shell follows the
-  machine's language; the application follows the account's. No em dashes.
+  machine's language until the customer chooses otherwise in the menu, and then
+  it follows the choice; the application follows the account's language, which
+  is a different setting on a different side. The choice exists because the
+  machine is a poor guess here: a Turkish engineer is routinely handed an
+  English Windows install by whoever set the office up. Changing it redraws the
+  menu and reloads any shell page that is open, so the setting takes effect in
+  front of the person who changed it. No em dashes.
 - **One version in three files.** `tauri.conf.json` is the source of truth;
   `npm run version:set -- x.y.z` moves all three and `npm run version:check`
   fails when they drift. The release workflow refuses a version that already has
@@ -61,17 +67,28 @@ behaviour is decided, it belongs on the server instead.
 src/                     the shell's own pages: plain HTML, one stylesheet
   connect.html           first run, the server setting, and "it did not answer"
   update.html            the update offer, its progress, and the restart
+  about.html             version, which server, and how to reach us
   js/                    esbuild's only job is the @tauri-apps/api imports
 src-tauri/src/
   lib.rs                 windows, downloads, navigation, the commands
   server.rs              what counts as an address, and is it WaterForm  [tested]
-  settings.rs            the three things we remember                    [tested]
+  settings.rs            the four things we remember                     [tested]
   update.rs              check, offer, install, snooze
   menu.rs                the native menu
   i18n.rs                TR/EN for what the operating system draws       [tested]
 tests/                   the shell pages under jsdom
 .github/workflows/       check (dev, Linux only) and release (release, four targets)
 ```
+
+## The About window
+
+Our own, not the platform's About panel, because the panel cannot carry an
+address anyone can click and the two things a customer is asked for when
+something is wrong are which server they are on and what version is running
+there. Both are on it, beside the product page, fabrikode.com and the contact
+address for the language in force. Every link leaves through the system browser:
+the window has a navigation guard, so it cannot wander onto a website and stop
+being chrome.
 
 ## What the shell knows about the application
 
