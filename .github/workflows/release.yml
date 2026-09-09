@@ -94,7 +94,7 @@ jobs:
             Windows: SmartScreen > Daha fazla bilgi > Yine de çalıştır.
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
+          uploadUpdaterJson: true
           args: ${{ matrix.args }}
 
   # Telling n8n, which records the release and mails us. Deliberately last and

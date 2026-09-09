@@ -1,6 +1,6 @@
 [package]
 name = "waterform-desktop"
-version = "0.1.0"
+version = "1.0.0"
 description = "WaterForm desktop shell"
 authors = ["Fabrikode"]
 edition = "2021"
