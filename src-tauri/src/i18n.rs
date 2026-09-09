@@ -35,14 +35,16 @@ fn from_locale(locale: Option<&str>) -> Lang {
     }
 }
 
+/// Some of these are drawn on one platform and not another: the application
+/// menu, hiding and full screen are macOS's, the Help menu is everybody else's.
+/// The struct carries all of them so that a translation is never platform
+/// -specific, which is why the compiler is told not to count the unused ones.
+#[allow(dead_code)]
 pub struct Strings {
     pub menu_app: &'static str,
     pub menu_file: &'static str,
     pub menu_edit: &'static str,
     pub menu_view: &'static str,
-    /// Windows and Linux only: on macOS everything in it belongs in the
-    /// application menu instead.
-    #[cfg_attr(target_os = "macos", allow(dead_code))]
     pub menu_help: &'static str,
     pub server: &'static str,
     pub downloads_folder: &'static str,
