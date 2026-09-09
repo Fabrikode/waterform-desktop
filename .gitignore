@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+.DS_Store
+*.log
+# The updater signing key never goes near this repository.
+*.key
+*.key.pub

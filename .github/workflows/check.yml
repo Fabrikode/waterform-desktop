@@ -1,0 +1,43 @@
+name: check
+
+# Everything that is cheap and runs on Linux. The four platform builds only
+# happen for a release, because a shell that compiles on Ubuntu compiles
+# everywhere: there is no platform-specific code in it beyond the menu.
+on:
+  push:
+    branches: [dev]
+  pull_request:
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      # The web view and its build dependencies. Without these the crate does not
+      # even configure on Linux.
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: npm ci
+      # One version, three files. A release built from numbers that disagree is a
+      # release nobody can reason about afterwards.
+      - run: npm run version:check
+      - run: npm run build:shell
+      - run: npm run test:shell
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml

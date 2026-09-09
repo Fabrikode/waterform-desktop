@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WaterForm</title>
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+<main class="card">
+  <img class="mark" src="brand/mark.svg" alt="" width="40" height="40">
+
+  <!-- Working out where to go. The window opens on this, every time, so the
+       customer never meets the web view's own error page. -->
+  <section id="busy">
+    <h1 data-s="connecting"></h1>
+    <span class="addr" id="busy-addr"></span>
+    <div class="spinner" role="status"></div>
+  </section>
+
+  <!-- Which server this installation talks to. -->
+  <section id="form" hidden>
+    <h1 data-s="formTitle"></h1>
+    <p data-s="formBody"></p>
+    <form id="f">
+      <label for="url" data-s="fieldLabel"></label>
+      <input id="url" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off">
+      <p class="note bad" id="err" hidden></p>
+      <div class="row">
+        <button type="submit" class="primary" id="go" data-s="connect"></button>
+        <button type="button" class="quiet" id="cancel" data-s="cancel" hidden></button>
+      </div>
+    </form>
+    <p class="note" data-s="formNote"></p>
+  </section>
+
+  <!-- A server is configured and did not answer. -->
+  <section id="down" hidden>
+    <h1 data-s="downTitle"></h1>
+    <p id="down-why"></p>
+    <span class="addr" id="down-addr"></span>
+    <div class="row">
+      <button type="button" class="primary" id="retry" data-s="retry"></button>
+      <button type="button" class="quiet" id="change" data-s="change"></button>
+    </div>
+  </section>
+</main>
+<script type="module" src="js/connect.js"></script>
+</body>
+</html>

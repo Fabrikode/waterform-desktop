@@ -1,0 +1,151 @@
+/*
+ * The shell's own pages.
+ *
+ * Same palette, same control sizes and same flat surfaces as the application
+ * these pages hand over to, so the first window a customer sees and the
+ * application behind it read as one product. Copied rather than imported: the
+ * shell has to draw itself before it has reached any server at all.
+ */
+
+:root {
+  --bg: oklch(0.97 0 0);
+  --surface: oklch(1 0 0);
+  --border: oklch(0.922 0 0);
+  --border-strong: oklch(0.87 0 0);
+  --ink: oklch(0.145 0 0);
+  --muted: oklch(0.48 0 0);
+  --faint: oklch(0.556 0 0);
+  --blue: oklch(0.488 0.243 264.376);
+  --blue-d: oklch(0.424 0.199 265.638);
+  --red: oklch(0.577 0.245 27.325);
+  --r: 8px;
+  --ctl-h-md: 38px;
+  --ctl-h-lg: 44px;
+  --ring: 0 0 0 3px color-mix(in oklch, var(--blue) 22%, transparent);
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  -webkit-font-smoothing: antialiased;
+  /* The shell's own pages are chrome, not a document: selecting and dragging
+     them is the sort of thing that makes a window feel like a web page. */
+  user-select: none;
+  cursor: default;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px;
+}
+
+.mark { width: 40px; height: 40px; display: block; }
+
+h1 {
+  margin-top: 18px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+p { margin-top: 8px; color: var(--muted); }
+
+.addr {
+  display: block;
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
+  word-break: break-all;
+  user-select: text;
+}
+
+label {
+  display: block;
+  margin-top: 22px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+input {
+  width: 100%;
+  height: var(--ctl-h-md);
+  padding: 0 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r);
+  user-select: text;
+  cursor: text;
+}
+input:focus { outline: none; box-shadow: var(--ring); border-color: var(--blue); }
+input:disabled { color: var(--faint); background: var(--bg); }
+
+.row { display: flex; gap: 8px; margin-top: 18px; }
+
+button {
+  height: var(--ctl-h-lg);
+  padding: 0 18px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+button:focus-visible { outline: none; box-shadow: var(--ring); }
+button[disabled] { opacity: 0.55; cursor: default; }
+
+.primary { flex: 1; background: var(--blue); color: #fff; }
+.primary:not([disabled]):hover { background: var(--blue-d); }
+
+.quiet { background: var(--surface); border-color: var(--border-strong); color: var(--ink); }
+.quiet:not([disabled]):hover { background: var(--bg); }
+
+.note { margin-top: 16px; font-size: 12px; color: var(--faint); }
+
+.bad { color: var(--red); }
+
+.spinner {
+  width: 16px; height: 16px; margin-top: 20px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+
+.bar {
+  margin-top: 18px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar > i { display: block; height: 100%; width: 0; background: var(--blue); transition: width 0.2s ease; }
+
+[hidden] { display: none !important; }

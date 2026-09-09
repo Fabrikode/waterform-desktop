@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "shell",
+  "description": "The shell's own pages. There is deliberately no `remote` block: the application the window loads is served over https and gets none of these, so a flaw in a page on the server cannot reach the customer's disk.",
+  "local": true,
+  "windows": ["main", "update"],
+  "permissions": ["core:default"]
+}
