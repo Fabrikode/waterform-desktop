@@ -96,3 +96,33 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.args }}
+
+  # Telling n8n, which records the release and mails us. Deliberately last and
+  # deliberately unable to fail the release: the update path does not run through
+  # n8n at all, so a webhook that is down costs a notification, never a release.
+  notify:
+    needs: [gate, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tell n8n a release went out
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SECRET: ${{ secrets.N8N_RELEASE_SECRET }}
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: |
+          if [ -z "$SECRET" ]; then
+            echo "N8N_RELEASE_SECRET is not set, so nobody was told. The release itself is published."
+            exit 0
+          fi
+          PAYLOAD=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/v$VERSION" --jq '{
+            version: (.tag_name | ltrimstr("v")),
+            releaseUrl: .html_url,
+            publishedAt: .published_at,
+            notes: (.body // ""),
+            files: [.assets[] | select(.name | test("\\.(dmg|exe|AppImage|deb)$")) | {name: .name, url: .browser_download_url, size: .size}]
+          }')
+          curl -sS --max-time 20 -X POST https://n8n.alany.co/webhook/waterform/desktop-release \
+            -H "content-type: application/json" \
+            -H "x-waterform-secret: $SECRET" \
+            -d "$PAYLOAD" \
+            || echo "n8n did not answer. The release is published; the notification is not."
