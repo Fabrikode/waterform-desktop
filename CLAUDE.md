@@ -6,15 +6,15 @@ anything; it is the contract for how work is done here.
 The application itself is not in this repository and never will be. It is at
 `Fabrikode/waterform` and it is served from a server. What is here is the window
 around it: which server, what happens to a file it hands over, and how this
-window replaces itself when there is a newer one. Roughly 900 lines of Rust and
-three HTML pages. If a change would add a second place where the product's
+window replaces itself when there is a newer one. Roughly 1,200 lines of Rust
+and three HTML pages. If a change would add a second place where the product's
 behaviour is decided, it belongs on the server instead.
 
 ## Why the pieces are what they are
 
 | Choice | Why |
 |---|---|
-| **Tauri v2**, not Electron | The shell uses no native API beyond a file save and a menu. Tauri ships 5 to 10 MB against Electron's 90+ and borrows the system's web view, so a Chromium security release is the operating system's problem, not a release of ours. |
+| **Tauri v2**, not Electron | The shell uses no native API beyond a file save, a menu and the print dialog. Tauri ships 5 to 10 MB against Electron's 90+ and borrows the system's web view, so a Chromium security release is the operating system's problem, not a release of ours. |
 | **This repository is public** | On a private repository a macOS runner minute counts ten times and a Windows one twice; one release would take a tenth of the organisation's 2,000 monthly minutes and share that budget with the application's own CI. Public runners and public releases are free. Nothing here is worth hiding. There is no open source licence: the code is readable, not reusable. |
 | **No Apple Developer account** | Ad-hoc signing, no notarisation. A customer gets one Gatekeeper prompt on first install, which the download page walks them through, and never again, including after updates. Adding the paid account later changes CI secrets and nothing else. |
 | **No offline mode** | Without a server there is no application. A local copy of a customer's tanks would be a second version of the truth about something they build out of steel. |
@@ -31,23 +31,33 @@ behaviour is decided, it belongs on the server instead.
 - **Nothing is injected into the application's page.** No banner, no script, no
   `eval`. The update offer is a window of ours; a reload is a navigation, not an
   injected `location.reload()`. The moment the shell writes script into a remote
-  document, the boundary above is decoration.
+  document, the boundary above is decoration. **One exception, printing**, and
+  it is kept to exactly this: two fixed sentences written in `print.rs`, never
+  assembled from anything the page or the network said, which only call what
+  the page chose to define (`printCalcOnePage`, `__wfPrintDone`) or the
+  standard `window.print()`. They carry no data in and nothing back out, and
+  the page gains no command by them. A third sentence, or one with a value
+  spliced into it, is a design change and belongs in this file first.
 - **Windows are shell pages or the application, never both.** `connect.html`,
   `offline` states and `update.html` are ours and get IPC. The server's pages get
   a window and nothing else.
 - **Every state says which server and why.** "Could not connect" without an
   address is a support call. The reasons live as codes in Rust
   (`address_code`, `probe_code`) and as sentences in `src/js/_strings.js`; a test
-  reads the codes out of the Rust source and fails if either language is missing
+  reads the codes out of the Rust source and fails if any language is missing
   one.
-- **Turkish and English, both, everywhere a person reads.** The shell follows the
-  machine's language until the customer chooses otherwise in the menu, and then
-  it follows the choice; the application follows the account's language, which
-  is a different setting on a different side. The choice exists because the
+- **Turkish, English and German, all three, everywhere a person reads.** The
+  shell follows the machine's language (Turkish on a Turkish machine, German on
+  a German one, English on every other) until the customer chooses otherwise in
+  the menu, and then it follows the choice; the application follows the
+  company's language, which is a different setting on a different side. The choice exists because the
   machine is a poor guess here: a Turkish engineer is routinely handed an
   English Windows install by whoever set the office up. Changing it redraws the
   menu and reloads any shell page that is open, so the setting takes effect in
-  front of the person who changed it. No em dashes.
+  front of the person who changed it. No em dashes. Translations follow the
+  glossary at the end of `Industricode/brand/VOICE.md`; German says "Sie", and
+  uses the Mac's own words on a Mac (Ablage, Einsetzen) and Windows' on Windows,
+  which is the one place `i18n.rs` looks at the platform.
 - **One version in three files.** `tauri.conf.json` is the source of truth;
   `npm run version:set -- x.y.z` moves all three and `npm run version:check`
   fails when they drift. The release workflow refuses a version that already has
@@ -75,7 +85,8 @@ src-tauri/src/
   settings.rs            the four things we remember                     [tested]
   update.rs              check, offer, install, snooze
   menu.rs                the native menu
-  i18n.rs                TR/EN for what the operating system draws       [tested]
+  print.rs               the print dialog the page asks for              [tested]
+  i18n.rs                TR/EN/DE for what the operating system draws    [tested]
 tests/                   the shell pages under jsdom
 .github/workflows/       check (dev, Linux only) and release (release, four targets)
 ```
@@ -92,8 +103,18 @@ being chrome.
 
 ## What the shell knows about the application
 
-Only `/api/health`, which already returns `app`, `ok`, `version` and `mode`. That
-is the whole contract. If the application ever needs to know it is running inside
+Two things. `/api/health`, which already returns `app`, `ok`, `version` and
+`mode`. And printing: the web view on macOS ignores `window.print()`, so inside
+the shell the application prepares the page for paper as it would in a browser
+and then navigates to `wf-desktop://print`. The main window's navigation guard
+cancels that navigation, opens the system's print dialog for the web view, and
+when printing is over runs `window.__wfPrintDone && window.__wfPrintDone()` in
+the page. On macOS "over" is the print operation's own completion callback; on
+Windows and Linux the shell calls `window.print()` in the page and waits for the
+page's `afterprint` event. File > Print (⌘P / Ctrl+P) runs
+`printCalcOnePage()` when the page has it, so the page prepares itself first,
+and otherwise asks for the same address. No `wf-desktop:` address is ever loaded,
+opened in a new window, or handed to the browser. That is the whole contract. If the application ever needs to know it is running inside
 the shell, the page can read `window.isTauri`, which Tauri sets even where it
 grants nothing else. The user agent is deliberately **not** customised: Tauri
 replaces it rather than appending, and inventing a browser string would be

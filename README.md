@@ -13,9 +13,11 @@ Downloads for customers: **https://waterform.fabrikode.com/downloads**
 - Puts Excel, PDF and DXF exports in the downloads folder and says so.
 - Updates itself. A new release on the `release` branch reaches installed copies
   within a few hours, or at the next launch.
-- Speaks Turkish or English. It follows the machine unless the customer picks a
-  language from the menu, because an English computer in a Turkish office is
-  ordinary.
+- Prints. File > Print (⌘P / Ctrl+P), or the application's own print button,
+  opens the system's print dialog; the web view on macOS would not do it alone.
+- Speaks Turkish, English or German. It follows the machine unless the customer
+  picks a language from the menu, because an English computer in a Turkish
+  office is ordinary.
 
 There is no offline mode. Without a server there is no application, and
 pretending otherwise would mean two versions of the truth about a customer's
@@ -35,8 +37,8 @@ On Linux also `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`
 ## Releasing
 
 ```bash
-npm run version:set -- 1.1.0     # one version, three files
-git commit -am "Raise the version to 1.1.0"
+npm run version:set -- 1.2.0     # one version, three files
+git commit -am "Raise the version to 1.2.0"
 git push origin dev              # check must be green
 git checkout release && git merge dev && git push origin release
 ```
