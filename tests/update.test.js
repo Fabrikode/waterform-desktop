@@ -23,11 +23,11 @@ vi.mock("@tauri-apps/api/event", () => ({
 const html = readFileSync(resolve(process.cwd(), "src/update.html"), "utf8");
 const body = html.split("<body>")[1].split("<script")[0];
 
-async function open(initial) {
+async function open(initial, lang = "tr") {
   document.body.innerHTML = body;
   invoke.mockReset();
   invoke.mockImplementation((command) => {
-    if (command === "shell_state") return Promise.resolve({ lang: "tr" });
+    if (command === "shell_state") return Promise.resolve({ lang });
     if (command === "update_status") return Promise.resolve(initial ?? null);
     return Promise.resolve();
   });
@@ -96,5 +96,13 @@ describe("the update window", () => {
     await open({ state: "upToDate" });
     expect(title()).toBe("Güncel");
     expect(no().hidden).toBe(true);
+  });
+
+  it("makes the offer in German on a German machine", async () => {
+    await open(null, "de");
+    emit({ state: "available", version: "1.2.0", current: "1.1.0", notes: null });
+    expect(title()).toBe("WaterForm 1.2.0 ist bereit");
+    expect(ok().textContent).toBe("Aktualisieren");
+    expect(no().textContent).toBe("Später");
   });
 });

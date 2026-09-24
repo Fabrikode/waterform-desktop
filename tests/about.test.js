@@ -65,6 +65,14 @@ describe("the about window", () => {
     expect(document.getElementById("version").textContent).toBe("Version 1.1.0");
   });
 
+  it("speaks German on a German machine", async () => {
+    await open({ ...base, lang: "de", serverUrl: null });
+    expect(document.documentElement.lang).toBe("de");
+    expect(document.getElementById("server").textContent).toBe("nicht eingerichtet");
+    expect(document.getElementById("close").textContent).toBe("Schließen");
+    expect(document.getElementById("mail").href).toBe("mailto:contact@fabrikode.com");
+  });
+
   it("hands every address to the browser and never follows one itself", async () => {
     await open(base);
     const links = [...document.querySelectorAll(".links a")];

@@ -18,12 +18,14 @@ pub const ID_ABOUT: &str = "wf.about";
 pub const ID_LANG_SYSTEM: &str = "wf.lang.system";
 pub const ID_LANG_TR: &str = "wf.lang.tr";
 pub const ID_LANG_EN: &str = "wf.lang.en";
+pub const ID_LANG_DE: &str = "wf.lang.de";
+pub const ID_PRINT: &str = "wf.print";
 pub const ID_UPDATES: &str = "wf.updates";
 pub const ID_RELOAD: &str = "wf.reload";
 pub const ID_DOWNLOADS: &str = "wf.downloads";
 
 /// `chosen` is what the customer picked, and `None` means they have not: the
-/// menu shows which of the three is in force rather than only the language being
+/// menu shows which of the four is in force rather than only the language being
 /// drawn, so "System language" stays distinguishable from "Turkish" on a Turkish
 /// machine.
 pub fn build<R: Runtime>(
@@ -41,6 +43,10 @@ pub fn build<R: Runtime>(
         .accelerator("CmdOrCtrl+R")
         .build(app)?;
     let downloads = MenuItemBuilder::with_id(ID_DOWNLOADS, s.downloads_folder).build(app)?;
+    // Through the page, so that it can prepare itself first (see print.rs).
+    let print = MenuItemBuilder::with_id(ID_PRINT, s.print)
+        .accelerator("CmdOrCtrl+P")
+        .build(app)?;
 
     // Our own window rather than the platform's About panel: the panel cannot
     // carry a link anyone can click, and the two things a customer needs from it
@@ -61,6 +67,11 @@ pub fn build<R: Runtime>(
         .item(
             &CheckMenuItemBuilder::with_id(ID_LANG_EN, "English")
                 .checked(chosen == Some(Lang::En))
+                .build(app)?,
+        )
+        .item(
+            &CheckMenuItemBuilder::with_id(ID_LANG_DE, "Deutsch")
+                .checked(chosen == Some(Lang::De))
                 .build(app)?,
         )
         .build()?;
@@ -98,6 +109,8 @@ pub fn build<R: Runtime>(
         let file = SubmenuBuilder::new(app, s.menu_file)
             .item(&downloads)
             .separator()
+            .item(&print)
+            .separator()
             .item(&PredefinedMenuItem::close_window(app, Some(s.close))?)
             .build()?;
 
@@ -122,6 +135,8 @@ pub fn build<R: Runtime>(
             .item(&server)
             .item(&language)
             .item(&downloads)
+            .separator()
+            .item(&print)
             .separator()
             .item(&PredefinedMenuItem::quit(app, Some(s.quit))?)
             .build()?;

@@ -20,9 +20,9 @@ pub struct Settings {
     /// Unix seconds. An update offer the customer put off is not offered again
     /// until this passes. Never blocks, only delays.
     pub update_snoozed_until: Option<i64>,
-    /// "tr" or "en" when the customer has chosen; `None` means follow the
-    /// machine. Stored as the code rather than the enum so that a settings file
-    /// written by a build that knows a third language still opens here.
+    /// "tr", "en" or "de" when the customer has chosen; `None` means follow
+    /// the machine. Stored as the code rather than the enum so that a settings
+    /// file written by a build that knows another language still opens here.
     pub lang: Option<String>,
 }
 

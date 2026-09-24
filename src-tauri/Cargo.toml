@@ -1,6 +1,6 @@
 [package]
 name = "waterform-desktop"
-version = "1.1.0"
+version = "1.2.0"
 description = "WaterForm desktop shell"
 authors = ["Fabrikode"]
 edition = "2021"
@@ -37,6 +37,25 @@ reqwest = { version = "0.12", default-features = false, features = [
   "charset",
   "http2",
   "rustls-tls-native-roots",
+] }
+
+# Printing on macOS: the web view there prints only when asked by the window,
+# and Tauri's own call gives no signal when the dialog closes. The same versions
+# wry already builds, so nothing new is downloaded.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+  "std",
+  "NSPrintInfo",
+  "NSPrintOperation",
+  "NSResponder",
+  "NSView",
+  "NSWindow",
+] }
+objc2-web-kit = { version = "0.3", default-features = false, features = [
+  "std",
+  "objc2-app-kit",
+  "WKWebView",
 ] }
 
 [profile.release]

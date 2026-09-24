@@ -2,7 +2,8 @@ name: check
 
 # Everything that is cheap and runs on Linux. The four platform builds only
 # happen for a release, because a shell that compiles on Ubuntu compiles
-# everywhere: there is no platform-specific code in it beyond the menu.
+# everywhere, with one exception: the macOS print dialog in `print.rs` is
+# compiled only on a Mac, so `npm run verify` on a Mac is part of changing it.
 on:
   push:
     branches: [dev]

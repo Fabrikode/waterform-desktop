@@ -1,15 +1,15 @@
-//! Turkish and English for the parts of the shell the operating system draws.
+//! Turkish, English and German for the parts of the shell the operating system
+//! draws.
 //!
-//! The application inside the window speaks whatever language the account is
-//! set to; the menu bar and the shell's own dialogs belong to the machine, so
-//! they follow the machine. Two languages, chosen once at startup, no runtime
-//! switch: a menu that changes language while you are using it is worse than
-//! one that picked wrong.
+//! The application inside the window speaks whatever language the company is
+//! set to; the menu bar and the shell's own dialogs follow the machine until the
+//! customer picks a language from the menu, and then they follow the choice.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lang {
     Tr,
     En,
+    De,
 }
 
 impl Lang {
@@ -17,6 +17,7 @@ impl Lang {
         match self {
             Lang::Tr => "tr",
             Lang::En => "en",
+            Lang::De => "de",
         }
     }
 
@@ -24,6 +25,7 @@ impl Lang {
         match code {
             "tr" => Some(Lang::Tr),
             "en" => Some(Lang::En),
+            "de" => Some(Lang::De),
             _ => None,
         }
     }
@@ -41,17 +43,35 @@ pub fn resolve(stored: Option<&str>) -> Lang {
     stored.and_then(Lang::from_code).unwrap_or_else(detect)
 }
 
-/// Turkish for a Turkish machine, English for every other. The product is sold
-/// in Türkiye first and in Europe in parallel, and English is the fallback the
-/// rest of the world reads.
+/// Turkish for a Turkish machine, German for a German one, English for every
+/// other. The product is sold in Türkiye first and in Europe in parallel, and
+/// English is the fallback the rest of the world reads.
 pub fn detect() -> Lang {
     from_locale(sys_locale::get_locale().as_deref())
 }
 
 fn from_locale(locale: Option<&str>) -> Lang {
-    match locale {
-        Some(tag) if tag.to_ascii_lowercase().starts_with("tr") => Lang::Tr,
+    // Only the language part counts: "de-AT", "de_CH.UTF-8" and "tr-TR" are
+    // German, German and Turkish, whatever the region.
+    let language = locale
+        .and_then(|tag| tag.split(['-', '_', '.', '@']).next())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    match language.as_str() {
+        "tr" => Lang::Tr,
+        "de" => Lang::De,
         _ => Lang::En,
+    }
+}
+
+/// The one place the platforms disagree about a word: macOS and Windows use
+/// different German for the same menu items, and a German reader notices a
+/// Windows word on a Mac at once. Turkish and English do not need this.
+const fn mac_or(mac: &'static str, other: &'static str) -> &'static str {
+    if cfg!(target_os = "macos") {
+        mac
+    } else {
+        other
     }
 }
 
@@ -70,6 +90,7 @@ pub struct Strings {
     pub menu_help: &'static str,
     pub server: &'static str,
     pub downloads_folder: &'static str,
+    pub print: &'static str,
     pub check_updates: &'static str,
     pub reload: &'static str,
     pub fullscreen: &'static str,
@@ -100,6 +121,7 @@ const TR: Strings = Strings {
     menu_help: "Yardım",
     server: "Sunucu…",
     downloads_folder: "İndirilenler klasörünü aç",
+    print: "Yazdır…",
     check_updates: "Güncellemeleri denetle…",
     reload: "Yeniden yükle",
     fullscreen: "Tam ekran",
@@ -130,6 +152,7 @@ const EN: Strings = Strings {
     menu_help: "Help",
     server: "Server…",
     downloads_folder: "Open downloads folder",
+    print: "Print…",
     check_updates: "Check for updates…",
     reload: "Reload",
     fullscreen: "Full screen",
@@ -150,16 +173,52 @@ const EN: Strings = Strings {
     update_failed_title: "Could not check for updates",
 };
 
+const DE: Strings = Strings {
+    menu_language: "Sprache",
+    lang_system: "Systemsprache",
+    menu_app: "WaterForm",
+    menu_file: mac_or("Ablage", "Datei"),
+    menu_edit: "Bearbeiten",
+    menu_view: mac_or("Darstellung", "Ansicht"),
+    menu_help: "Hilfe",
+    server: "Server…",
+    downloads_folder: "Downloads-Ordner öffnen",
+    print: "Drucken…",
+    check_updates: "Nach Aktualisierungen suchen…",
+    reload: "Neu laden",
+    fullscreen: "Vollbild",
+    about: "Über WaterForm",
+    quit: "WaterForm beenden",
+    hide: "WaterForm ausblenden",
+    hide_others: "Andere ausblenden",
+    undo: mac_or("Widerrufen", "Rückgängig"),
+    redo: "Wiederholen",
+    cut: "Ausschneiden",
+    copy: "Kopieren",
+    paste: mac_or("Einsetzen", "Einfügen"),
+    select_all: "Alles auswählen",
+    minimize: mac_or("Im Dock ablegen", "Minimieren"),
+    close: "Schließen",
+    saved_title: "Heruntergeladen",
+    saved_body: "Im Downloads-Ordner gespeichert.",
+    update_failed_title: "Suche nach Aktualisierungen fehlgeschlagen",
+};
+
 pub fn strings(lang: Lang) -> &'static Strings {
     match lang {
         Lang::Tr => &TR,
         Lang::En => &EN,
+        Lang::De => &DE,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every language the shell speaks. A fourth that is added to the enum and
+    /// not here fails `a_code_is_a_round_trip`'s exhaustive match below.
+    const ALL: [Lang; 3] = [Lang::Tr, Lang::En, Lang::De];
 
     #[test]
     fn a_turkish_machine_gets_turkish() {
@@ -172,17 +231,84 @@ mod tests {
     fn a_choice_beats_the_machine() {
         assert_eq!(resolve(Some("tr")), Lang::Tr);
         assert_eq!(resolve(Some("en")), Lang::En);
+        assert_eq!(resolve(Some("de")), Lang::De);
         // Nonsense in the settings file is not a language; the machine decides.
-        assert_eq!(resolve(Some("de")), detect());
+        assert_eq!(resolve(Some("fr")), detect());
+        assert_eq!(resolve(Some("")), detect());
         assert_eq!(resolve(None), detect());
+    }
+
+    #[test]
+    fn a_german_machine_gets_german() {
+        assert_eq!(from_locale(Some("de-DE")), Lang::De);
+        assert_eq!(from_locale(Some("de-AT")), Lang::De);
+        assert_eq!(from_locale(Some("de_CH.UTF-8")), Lang::De);
+        assert_eq!(from_locale(Some("DE")), Lang::De);
     }
 
     #[test]
     fn everything_else_gets_english() {
         assert_eq!(from_locale(Some("en-GB")), Lang::En);
-        assert_eq!(from_locale(Some("de-DE")), Lang::En);
+        assert_eq!(from_locale(Some("fr-FR")), Lang::En);
+        assert_eq!(from_locale(Some("nl-NL")), Lang::En);
+        assert_eq!(from_locale(Some("")), Lang::En);
         assert_eq!(from_locale(None), Lang::En);
         // Turkmen is not Turkish.
         assert_eq!(from_locale(Some("tk-TM")), Lang::En);
+        // Nor is a language that merely starts with the same letters.
+        assert_eq!(from_locale(Some("trv")), Lang::En);
+        assert_eq!(from_locale(Some("dsb-DE")), Lang::En);
+    }
+
+    #[test]
+    fn a_code_is_a_round_trip() {
+        // Exhaustive on purpose: a new variant does not compile until it is in ALL.
+        for lang in ALL {
+            match lang {
+                Lang::Tr | Lang::En | Lang::De => {}
+            }
+            assert_eq!(Lang::from_code(lang.code()), Some(lang));
+        }
+    }
+
+    #[test]
+    fn every_language_says_everything() {
+        for lang in ALL {
+            let s = strings(lang);
+            let all = [
+                s.menu_language,
+                s.lang_system,
+                s.menu_app,
+                s.menu_file,
+                s.menu_edit,
+                s.menu_view,
+                s.menu_help,
+                s.server,
+                s.downloads_folder,
+                s.print,
+                s.check_updates,
+                s.reload,
+                s.fullscreen,
+                s.about,
+                s.quit,
+                s.hide,
+                s.hide_others,
+                s.undo,
+                s.redo,
+                s.cut,
+                s.copy,
+                s.paste,
+                s.select_all,
+                s.minimize,
+                s.close,
+                s.saved_title,
+                s.saved_body,
+                s.update_failed_title,
+            ];
+            for text in all {
+                assert!(!text.trim().is_empty(), "{}: an empty string", lang.code());
+                assert!(!text.contains('—'), "{}: an em dash in {text}", lang.code());
+            }
+        }
     }
 }

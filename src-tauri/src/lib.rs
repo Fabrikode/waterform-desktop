@@ -9,6 +9,7 @@
 
 mod i18n;
 mod menu;
+mod print;
 mod server;
 mod settings;
 mod update;
@@ -206,7 +207,7 @@ fn restart_now(app: AppHandle) {
     app.restart();
 }
 
-/// The language the shell draws in: "tr", "en", or nothing to follow the machine.
+/// The language the shell draws in: "tr", "en", "de", or nothing to follow the machine.
 #[tauri::command]
 fn set_language(app: AppHandle, code: Option<String>) {
     apply_language(&app, code);
@@ -317,6 +318,11 @@ fn is_ours(app: &AppHandle, url: &Url) -> bool {
 }
 
 fn open_outside(url: &Url) {
+    // An address meant for the shell never reaches the browser, even by mistake:
+    // it would open a dialog asking which application handles `wf-desktop:`.
+    if print::request(url).is_some() {
+        return;
+    }
     if let Err(error) = tauri_plugin_opener::open_url(url.as_str(), None::<&str>) {
         log::warn!("could not hand {url} to the browser: {error}");
     }
@@ -463,7 +469,10 @@ fn open_about(app: &AppHandle) {
     let nav = app.clone();
     let built = WebviewWindowBuilder::new(app, ABOUT, WebviewUrl::App("about.html".into()))
         .on_navigation(move |url| {
-            if is_local(&nav, url) {
+            if print::request(url).is_some() {
+                // Only the application's window prints.
+                false
+            } else if is_local(&nav, url) {
                 true
             } else {
                 open_outside(url);
@@ -492,7 +501,17 @@ fn build_main(app: &AppHandle) -> tauri::Result<()> {
         .min_inner_size(1024.0, 640.0)
         .center()
         .on_navigation(move |url| {
-            if is_ours(&nav, url) {
+            // The application asking for the print dialog (see print.rs). Checked
+            // first, because `is_local` counts every scheme that is not http as
+            // ours and would let the web view try to load it.
+            if let Some(request) = print::request(url) {
+                if request == print::Request::Print {
+                    if let Some(window) = nav.get_webview_window(MAIN) {
+                        print::print(window);
+                    }
+                }
+                false
+            } else if is_ours(&nav, url) {
                 true
             } else {
                 open_outside(url);
@@ -500,7 +519,9 @@ fn build_main(app: &AppHandle) -> tauri::Result<()> {
             }
         })
         .on_new_window(move |url, _features| {
-            if is_ours(&popup, &url) {
+            if print::request(&url).is_some() {
+                NewWindowResponse::Deny
+            } else if is_ours(&popup, &url) {
                 NewWindowResponse::Allow
             } else {
                 open_outside(&url);
@@ -559,6 +580,22 @@ fn reload_main(app: &AppHandle) {
     }
 }
 
+/// File > Print. Through the page rather than straight to the dialog, so that
+/// the page can prepare itself first exactly as its own print button does. A
+/// shell page is not printed: there is nothing on it anyone needs on paper.
+fn print_from_menu(app: &AppHandle) {
+    let Some(window) = app.get_webview_window(MAIN) else {
+        return;
+    };
+    let Ok(current) = window.url() else { return };
+    if is_local(app, &current) {
+        return;
+    }
+    if let Err(error) = window.eval(print::FROM_MENU) {
+        log::warn!("could not ask the page to print: {error}");
+    }
+}
+
 fn open_downloads_folder(app: &AppHandle) {
     if let Ok(dir) = app.path().download_dir() {
         if let Err(error) =
@@ -604,6 +641,8 @@ pub fn run() {
             menu::ID_LANG_SYSTEM => apply_language(app, None),
             menu::ID_LANG_TR => apply_language(app, Some("tr".into())),
             menu::ID_LANG_EN => apply_language(app, Some("en".into())),
+            menu::ID_LANG_DE => apply_language(app, Some("de".into())),
+            menu::ID_PRINT => print_from_menu(app),
             menu::ID_RELOAD => reload_main(app),
             menu::ID_DOWNLOADS => open_downloads_folder(app),
             menu::ID_UPDATES => {

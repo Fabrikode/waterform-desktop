@@ -1,9 +1,10 @@
 /**
- * Turkish and English for the shell's own pages.
+ * Turkish, English and German for the shell's own pages.
  *
- * The language is the machine's, chosen once in Rust: the application inside the
- * window speaks whatever the account is set to, but this page is drawn before
- * any account exists.
+ * The language is decided in Rust (the machine's, or the one picked from the
+ * menu) and handed over by `shell_state`: the application inside the window
+ * speaks whatever the company is set to, but these pages are drawn before any
+ * account exists.
  */
 
 const errors = {
@@ -28,6 +29,17 @@ const errors = {
     "not-waterform": "There is no WaterForm server at this address.",
     "not-ready": "The server cannot serve right now. Try again shortly.",
     unknown: "Could not connect.",
+  },
+  de: {
+    empty: "Geben Sie eine Adresse ein.",
+    malformed: "Das sieht nicht nach einer Adresse aus.",
+    scheme: "Nur Adressen mit http und https können geöffnet werden.",
+    insecure: "Unverschlüsseltes http ist nur für Adressen im eigenen Netzwerk zulässig, weil die Sitzung sonst offen übertragen wird. Verwenden Sie https.",
+    unreachable: "Der Server hat nicht geantwortet. Prüfen Sie die Adresse und Ihre Netzwerkverbindung.",
+    certificate: "Das Sicherheitszertifikat des Servers konnte nicht geprüft werden. Wenden Sie sich an die Person, die den Server eingerichtet hat.",
+    "not-waterform": "Unter dieser Adresse gibt es keinen WaterForm-Server.",
+    "not-ready": "Der Server ist gerade nicht bereit. Versuchen Sie es gleich noch einmal.",
+    unknown: "Keine Verbindung möglich.",
   },
 };
 
@@ -105,5 +117,43 @@ export const dict = {
     restart: "Restart",
     failedTitle: "Could not update",
     close: "Close",
+  },
+  de: {
+    connecting: "Verbindung wird hergestellt",
+    connectingButton: "Wird verbunden…",
+    formTitle: "Serveradresse",
+    formBody: "WaterForm läuft auf dem Server unter dieser Adresse. Wenn Ihre Firma einen eigenen Server hat, geben Sie dessen Adresse ein.",
+    fieldLabel: "Adresse",
+    connect: "Verbinden",
+    cancel: "Abbrechen",
+    formNote: "Sie können diese Einstellung später ändern.",
+    downTitle: "Der Server hat nicht geantwortet",
+    retry: "Erneut versuchen",
+    change: "Adresse ändern",
+    errors: errors.de,
+
+    aboutVersion: "Version",
+    aboutMade: "WaterForm ist ein Produkt von Fabrikode. Die Anwendung selbst läuft auf einem Server. Dieses Fenster ist nur der Rahmen, in dem sie sich öffnet.",
+    aboutServer: "Server",
+    aboutServerVersion: "Serverversion",
+    aboutUnset: "nicht eingerichtet",
+    aboutProduct: "Produktseite und Hilfe",
+    aboutCompany: "Fabrikode",
+    // There is no German mailbox; German customers write to the English one.
+    aboutMailAddress: "contact@fabrikode.com",
+    aboutRights: "© Fabrikode. Ingenieursoftware für die Fertigung.",
+    checking: "Suche nach Aktualisierungen",
+    upToDateTitle: "Aktuell",
+    upToDateBody: "Sie verwenden die neueste Version.",
+    availableTitle: (v) => `WaterForm ${v} ist bereit`,
+    availableBody: "Die Installation dauert etwa eine Minute, danach öffnet sich die Anwendung wieder. Ihre Arbeit auf dem Server bleibt unberührt.",
+    update: "Aktualisieren",
+    later: "Später",
+    downloading: "Wird heruntergeladen",
+    readyTitle: "Installiert",
+    readyBody: "Starten Sie die Anwendung neu, um die neue Version zu verwenden.",
+    restart: "Neu starten",
+    failedTitle: "Aktualisierung fehlgeschlagen",
+    close: "Schließen",
   },
 };
