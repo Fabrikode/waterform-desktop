@@ -57,9 +57,10 @@ describe("the about window", () => {
     expect(document.getElementById("server-version").textContent).toBe("ayarlanmadı");
   });
 
-  it("writes to the Turkish address in Turkish and the English one in English", async () => {
+  it("writes to the one contact address in Turkish and in English", async () => {
     await open(base);
-    expect(document.getElementById("mail").href).toBe("mailto:iletisim@fabrikode.com");
+    expect(document.getElementById("mail").textContent).toBe("contact@fabrikode.com");
+    expect(document.getElementById("mail").href).toBe("mailto:contact@fabrikode.com");
     await open({ ...base, lang: "en" });
     expect(document.getElementById("mail").href).toBe("mailto:contact@fabrikode.com");
     expect(document.getElementById("version").textContent).toBe("Version 1.1.0");

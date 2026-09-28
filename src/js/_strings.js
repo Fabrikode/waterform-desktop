@@ -65,7 +65,7 @@ export const dict = {
     aboutUnset: "ayarlanmadı",
     aboutProduct: "Ürün sayfası ve destek",
     aboutCompany: "Fabrikode",
-    aboutMailAddress: "iletisim@fabrikode.com",
+    aboutMailAddress: "contact@fabrikode.com",
     aboutRights: "© Fabrikode. Üretim için mühendislik yazılımı.",
     checking: "Güncellemeler denetleniyor",
     upToDateTitle: "Güncel",

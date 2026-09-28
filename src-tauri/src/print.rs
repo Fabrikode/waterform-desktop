@@ -286,7 +286,7 @@ mod tests {
             "http://localhost:3100/engineering",
             "tauri://localhost/connect.html",
             "blob:https://app.waterform.fabrikode.com/0a1b",
-            "mailto:iletisim@fabrikode.com",
+            "mailto:contact@fabrikode.com",
             "wf-desktopx://print",
             "desktop://print",
         ] {
