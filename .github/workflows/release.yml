@@ -121,7 +121,7 @@ jobs:
             notes: (.body // ""),
             files: [.assets[] | select(.name | test("\\.(dmg|exe|AppImage|deb)$")) | {name: .name, url: .browser_download_url, size: .size}]
           }')
-          curl -sS --max-time 20 -X POST https://n8n.alany.co/webhook/waterform/desktop-release \
+          curl -sS --max-time 20 -X POST https://n8n.fabrikode.com/webhook/waterform/desktop-release \
             -H "content-type: application/json" \
             -H "x-waterform-secret: $SECRET" \
             -d "$PAYLOAD" \
